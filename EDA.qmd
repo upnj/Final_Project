@@ -1,0 +1,321 @@
+---
+title: "Final Project: Diabetic Dataset Analysys"
+author: "Upendra Joshi"
+format: html
+editor: visual
+---
+# EDA on the Data
+
+## The Diabetic data
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is a health-related telephone survey that is collected annually by the CDC. Each year, the survey collects responses from over 400,000 Americans on health-related risk behaviors, chronic health conditions, and the use of preventative services.
+diabetes _ binary _ health _ indicators _ BRFSS2015.csv is a clean data set of 253,680 survey responses to the CDC's BRFSS2015. The target variable Diabetes_binary has 2 classes. 0 is for no diabetes, and 1 is for pre-diabetes or diabetes. This data set has 21 feature variables and is not balanced.The ultimate goal is to build a predictive model that can identify individuals at risk of developing diabetes based on the available data.
+
+### The Purpuse of EDA:
+We perform the exploratory data analysis (EDA) to clean the data and understand the various variables. Check the missing values and investigate if the data is balanced or not. We can run basic summary statistics to get the feel for the data. The purpose of this EDA is to investigate the relationships between various health indicators and the presence of diabetes in the population.
+
+In this data set I will be focusing on binary variables (diabetes, sex etc) which have "Yes/No" or male/female values.The target variable is "Diabetes_binary". The predictor variables are Age, Income, education etc. The meaning full factor levels should be created for ordinal variables (General Health, Education, Age and Income).
+
+
+```{r}
+# Loading packages
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(tidycensus)
+library(lubridate)
+library(tibble)
+library(ggplot2)
+library(quantreg)
+
+#Read in the data
+diabetes_data <- read.csv ("diabetes_binary_health_indicators_BRFSS2015.csv")
+
+# Inspect the data
+str(diabetes_data)
+summary(diabetes_data)
+
+# Check for missing values
+colSums(is.na(diabetes_data))
+
+
+```
+
+There are no missing values in the data.
+First, let's take a look at the distribution of the target variable, "Diabetes_binary":
+
+```{r}
+table(diabetes_data$Diabetes_binary)
+prop.table(table(diabetes_data$Diabetes_binary))
+
+
+```
+This shows that 14% of the individuals in the dataset have diabetes.
+Next, let's explore the relationships between the predictor variables and the presence of diabetes. We can start by looking at the prevalence of diabetes across different categories of the predictor variables:
+
+```{r}
+
+ # Convert categorical variables to factors
+cols <- c("HighBP", "HighChol", "CholCheck", "Smoker", "Stroke", "HeartDiseaseorAttack", 
+          "PhysActivity", "Fruits", "Veggies", "HvyAlcoholConsump", "AnyHealthcare", 
+          "NoDocbcCost", "DiffWalk", "Sex", "Diabetes_binary")
+diabetes_data[cols] <- lapply(diabetes_data[cols], factor)
+
+# Convert Age to factor with meaningful labels
+diabetes_data$AgeGroup <- factor(diabetes_data$Age,
+                                 levels = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13),
+                                 labels = c("18-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                                            "50-54", "55-59", "60-64", "65-69", "70-74", "75-79",
+                                            "80+"))
+
+diabetes_data$Education <- factor(diabetes_data$Education,
+                                  levels = 1:6,
+                                  labels = c("Never attended school", 
+                                             "Elementary", 
+                                             "Some high school",
+                                             "High school graduate",
+                                             "Some college",
+                                             "College graduate"))
+
+diabetes_data$Income <- factor(diabetes_data$Income,
+                               levels = 1:8,
+                               labels = c("Less than $10,000",
+                                          "$10,000-$15,000",
+                                          "$15,000-$20,000",
+                                          "$20,000-$25,000", 
+                                          "$25,000-$35,000",
+                                          "$35,000-$50,000",
+                                          "$50,000-$75,000",
+                                          "$75,000 or more"))
+                                          
+diabetes_data$GenHlth <- factor(diabetes_data$GenHlth,
+                                levels = 1:5,
+                                labels = c("Excellent", "Very good", "Good",
+                                           "Fair", "Poor"))
+                                             
+
+# Physical activity
+phys_act <- prop.table(table(diabetes_data$PhysActivity, diabetes_data$Diabetes_binary), 2)[2,]
+phys_act
+
+# Education and diabetes
+edu_diab_prop <- prop.table(table(diabetes_data$Education, diabetes_data$Diabetes_binary), 1)[,2] 
+edu_diab_prop
+
+
+# Income and diabetes
+inc_diab_prop <- prop.table(table(diabetes_data$Income, diabetes_data$Diabetes_binary), 1)[,2]
+inc_diab_prop
+
+
+
+# Check the distribution 
+table(diabetes_data$AgeGroup)
+
+# Proportion with diabetes in each age group
+age_diab_prop <- prop.table(table(diabetes_data$AgeGroup, diabetes_data$Diabetes_binary), 1)[,2]
+age_diab_prop
+
+```
+
+These results provide some initial insights into the factors associated with diabetes. For example, we can see that the prevalence of diabetes increases with age and is higher among individuals with lower levels of education and income.
+To further explore the relationships, we can create visualizations such as bar plots and heatmaps:
+
+```{r}
+
+
+# Plot of diabetes prevalence by age group
+barplot(age_diab_prop, 
+        xlab = "Age Group", 
+        ylab = "Proportion with Diabetes", 
+        main = "Diabetes Prevalence by Age Group",
+        cex.names = 0.7, 
+        ylim = c(0,0.5),
+        names.arg = c("18-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+                      "50-54", "55-59", "60-64", "65-69", "70-74", "75-79",
+                      "80+"),  # Set x-axis labels
+        las = 2, # Rotate x-axis labels
+        col = "steelblue" ) #set the color for bars  
+
+
+```
+
+The disctribution of the Age group clearly shows that the prevalence of diabetes increases with age.
+
+
+```{r}
+# Diabetes prevalence by sex
+sex_diab_prop <- prop.table(table(diabetes_data$Sex, diabetes_data$Diabetes_binary), 1)[,2]
+barplot(sex_diab_prop, 
+        xlab = "Sex", 
+        ylab = "Proportion with Diabetes", 
+        main = "Diabetes Prevalence by Sex",
+        names.arg = c("Female", "Male"),
+        col = c("pink", "lightblue"),
+        ylim = c(0,0.3))
+```
+Males have a slightly higher proportion of diabetes compared to females .
+This suggests that sex may have some influence on diabetes risk, with males being at higher risk.
+
+```{r}
+# Heatmap of diabetes prevalence by age and education
+age_edu_diab_prop <- prop.table(table(diabetes_data$AgeGroup, diabetes_data$Education, diabetes_data$Diabetes_binary), c(1,2))[,,2]
+heatmap(age_edu_diab_prop,
+        xlab = "Education",
+        ylab = "Age Group",
+        main = "Diabetes Prevalence by Age and Education",
+        col = heat.colors(10),
+        cexRow = 0.7, 
+        cexCol = 0.7,
+        margins = c(5,5))
+```
+
+Heatmap of Diabetes Prevalence by Age and Education:
+
+There is a clear trend of increasing diabetes prevalence with age across all education levels.
+Within each age group, diabetes prevalence is consistently highest among those with the lowest education levels and decreases as education level increases.
+The highest diabetes prevalence (around 60%) is seen in the oldest age group (80+) with the lowest education level (never attended school).
+
+
+
+```{r}
+# BMI and diabetes
+boxplot(BMI ~ Diabetes_binary, 
+        data = diabetes_data,
+        xlab = "Diabetes", 
+        ylab = "BMI",
+        main = "Relationship between BMI and Diabetes",
+        col = c("lightgreen", "lightpink"))
+```
+Relationship between BMI and Diabetes:
+
+Individuals with diabetes have a notably higher median BMI and a larger spread of BMI values compared to those without diabetes.
+This suggests that higher BMI is strongly associated with increased diabetes risk.
+
+```{r}
+# Income and diabetes
+inc_diab_prop <- prop.table(table(diabetes_data$Income, diabetes_data$Diabetes_binary), 1)[,2]
+barplot(inc_diab_prop,
+        xlab = "Income", 
+        ylab = "Proportion with Diabetes",
+        main = "Diabetes Prevalence by Income",
+        col = "lightgreen",
+        las = 2,
+        cex.names = 0.7,
+        ylim = c(0,0.4))
+```
+
+
+Diabetes Prevalence by Income:
+
+There is a clear trend of decreasing diabetes prevalence as income increases.
+The highest diabetes prevalence (around 29%) is seen in the lowest income group ($10,000-$15,000), while the lowest prevalence (around 9%) is in the highest income group ($75,000 or more).
+This highlights a significant socioeconomic gradient in diabetes risk.
+
+```{r}
+# Physical activity and diabetes
+phys_act_diab_prop <- prop.table(table(diabetes_data$PhysActivity, diabetes_data$Diabetes_binary), 1)[,2]
+barplot(phys_act_diab_prop,
+        xlab = "Physically Active", 
+        ylab = "Proportion with Diabetes",
+        main = "Diabetes Prevalence by Physical Activity",
+        names.arg = c("No", "Yes"),
+        col = c("lightpink", "lightgreen"),
+        ylim = c(0,0.35))
+```
+Diabetes Prevalence by Physical Activity:
+
+Individuals who are physically inactive have a much higher proportion of diabetes (around 22%) compared to those who are physically active (around 13%).
+This underscores the importance of physical activity in reducing diabetes risk.
+
+```{r}
+# Diabetes prevalence by health-related factors
+HighBP_summary <- prop.table(table(diabetes_data$Diabetes_binary, diabetes_data$HighBP), margin = 2)
+print("High Blood Pressure Summary:")
+print(HighBP_summary)
+
+
+```
+High Blood Pressure Summary:
+
+Among individuals without diabetes (0), 93.96% don't have high blood pressure (0) and 6.04% have high blood pressure (1).
+Among individuals with diabetes (1), 75.55% don't have high blood pressure (0) and 24.45% have high blood pressure (1).
+The proportion of individuals with high blood pressure is higher among those with diabetes (24.45%) compared to those without diabetes (6.04%).
+This suggests that having high blood pressure is associated with a higher prevalence of diabetes.
+
+```{r}
+
+HighChol_summary <- prop.table(table(diabetes_data$Diabetes_binary, diabetes_data$HighChol), margin = 2)
+
+print("High Cholesterol Summary:")
+print(HighChol_summary)
+
+```
+Among individuals without diabetes (0), 92.02% don't have high cholesterol (0) and 7.98% have high cholesterol (1).
+Among individuals with diabetes (1), 77.99% don't have high cholesterol (0) and 22.01% have high cholesterol (1).
+The proportion of individuals with high cholesterol is substantially higher among those with diabetes (22.01%) compared to those without diabetes (7.98%).
+
+This finding suggests that having high cholesterol is strongly associated with a higher prevalence of diabetes. The difference in the proportion of individuals with high cholesterol between the diabetes and non-diabetes groups (22.01% vs 7.98%) is quite large, indicating a significant relationship between these two health conditions.
+
+```{r}
+
+PhysActivity_summary <- prop.table(table(diabetes_data$Diabetes_binary, diabetes_data$PhysActivity), margin = 2)
+
+print("Physical Activity Summary:")
+print(PhysActivity_summary)
+
+```
+
+Among individuals without diabetes (0), 78.86% are not physically active (0) and 21.14% are physically active (1).
+Among individuals with diabetes (1), 88.39% are not physically active (0) and 11.61% are physically active (1).
+The proportion of individuals who are physically active is notably lower among those with diabetes (11.61%) compared to those without diabetes (21.14%).
+
+This finding suggests that lack of physical activity is associated with a higher prevalence of diabetes. The difference in the proportion of physically active individuals between the diabetes and non-diabetes groups (11.61% vs 21.14%) is substantial, indicating a significant relationship between physical inactivity and diabetes.
+
+```{r}
+Fruits_summary <- prop.table(table(diabetes_data$Diabetes_binary, diabetes_data$Fruits), margin = 2)
+
+print("Fruit Consumption Summary:")
+print(Fruits_summary)
+
+```
+Among individuals without diabetes (0), 84.21% don't consume fruit (0) and 15.79% consume fruit (1).
+Among individuals with diabetes (1), 87.14% don't consume fruit (0) and 12.86% consume fruit (1).
+The proportion of individuals who consume fruit is slightly lower among those with diabetes (12.86%) compared to those without diabetes (15.79%).
+
+This finding suggests a weak association between not consuming fruit and a higher prevalence of diabetes. The difference in the proportion of fruit consumers between the diabetes and non-diabetes groups (12.86% vs 15.79%) is relatively small, indicating a less substantial relationship compared to physical activity.
+
+
+```{r}
+
+Veggies_summary <- prop.table(table(diabetes_data$Diabetes_binary, diabetes_data$Veggies), margin = 2)
+
+print("Vegetable Consumption Summary:")
+print(Veggies_summary)
+
+```
+Among individuals without diabetes (0), 82.00% don't consume vegetables (0) and 18.00% consume vegetables (1).
+Among individuals with diabetes (1), 87.01% don't consume vegetables (0) and 12.99% consume vegetables (1).
+The proportion of individuals who consume vegetables is lower among those with diabetes (12.99%) compared to those without diabetes (18.00%).
+
+This finding suggests a weak to moderate association between not consuming vegetables and a higher prevalence of diabetes. The difference in the proportion of vegetable consumers between the diabetes and non-diabetes groups (12.99% vs 18.00%) is somewhat larger than for fruit consumption, but still less substantial than the association seen with physical activity.
+
+###Overall Summary:
+The analyses reveal several key factors associated with diabetes prevalence in this dataset. Age, education, income, BMI, and physical activity all show significant relationships with diabetes risk.
+Diabetes prevalence increases markedly with age and is highest among those with the lowest education and income levels. Higher BMI and physical inactivity are also strongly associated with increased diabetes prevalence.
+Males appear to have a slightly higher risk of diabetes compared to females, though the difference is not as pronounced as for the other factors examined.
+These findings suggest that efforts to prevent and manage diabetes should focus on promoting healthy lifestyles (maintaining a healthy BMI, engaging in regular physical activity) and addressing socioeconomic disparities in health. Targeted interventions for older adults and those with lower education and income levels may be particularly beneficial in reducing the burden of diabetes in this population.
+
+The analysis of these health-related factors reveals several important associations with diabetes prevalence:
+High blood pressure and high cholesterol show the strongest associations with diabetes. Individuals with these conditions have a much higher prevalence of diabetes compared to those without these conditions.
+Lack of physical activity is also notably associated with increased diabetes prevalence. Physically inactive individuals are more likely to have diabetes compared to those who are active.
+Fruit and vegetable consumption show weaker associations with diabetes prevalence, but individuals who don't consume these foods do have a slightly higher likelihood of having diabetes.
+These findings suggest that high blood pressure, high cholesterol, and physical inactivity are important risk factors for diabetes in this population. Interventions targeting these factors, such as promoting physical activity and helping individuals manage their blood pressure and cholesterol levels, could potentially help reduce the burden of diabetes.
+While fruit and vegetable consumption appear to be less strongly associated with diabetes in this analysis, promoting a healthy diet rich in these foods may still be beneficial for overall health and potentially for diabetes prevention and management.
+
+Among the three lifestyle factors examined (physical activity, fruit consumption, and vegetable consumption), lack of physical activity shows the strongest association with a higher prevalence of diabetes. The proportion of physically active individuals is markedly lower in the diabetes group compared to the non-diabetes group.
+Fruit and vegetable consumption show weaker associations with diabetes prevalence. The proportions of individuals consuming these foods are only slightly lower in the diabetes group compared to the non-diabetes group, with vegetable consumption showing a somewhat stronger association than fruit consumption.
+These findings suggest that promoting physical activity should be a key focus of diabetes prevention and management efforts. While encouraging fruit and vegetable consumption is also important for overall health, these factors appear to have a less direct relationship with diabetes prevalence in this data.
+
+[click here for the Modeling page](Modeling.html)
