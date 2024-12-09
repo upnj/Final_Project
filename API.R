@@ -51,7 +51,7 @@ function(HighBP = 0, HighChol = 0, PhysActivity = 1, Sex = 0, GenHlth = 3, HvyAl
 function() {
   info <- list(
     name = "Upendra Joshi",
-    url = "https://your-github-username.github.io/your-repo-name"
+    url = "https://upnj.github.io/Final_Project/"
   )
   
   return(info)
