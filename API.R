@@ -8,8 +8,28 @@ library(ggplot2)
 # Read in your data
 diabetes_data <- read.csv("diabetes_binary_health_indicators_BRFSS2015.csv")
 
-# Fit your 'best' model to the entire data set
-best_model <- rpart(Diabetes_binary ~ HighBP + HighChol + PhysActivity + Sex  + GenHlth +                         HvyAlcoholConsump + MentHlth + PhysHlth , data = diabetes_data)
+# Define the model
+tree_model <- decision_tree(
+  mode = "classification",
+  cost_complexity = 0.001,  # Replace with the best cost_complexity value from your tuning results
+  tree_depth = 5            # Replace with the best tree_depth value from your tuning results
+) %>%
+  set_mode("classification") %>%
+  set_engine("rpart")
+
+# Define the recipe
+tree_recipe <- recipe(Diabetes_binary ~ HighBP + HighChol + PhysActivity + Sex  + GenHlth +                         HvyAlcoholConsump + MentHlth + PhysHlth , data = diabetes_data) %>%
+  step_dummy(all_nominal_predictors())
+
+# Define the workflow
+tree_workflow <- workflow() %>%
+  add_model(tree_model) %>%
+  add_recipe(tree_recipe)
+
+# Fit the 'best' model to the entire data set
+best_model <- tree_workflow %>%
+  fit(data = diabetes_data)
+
 
 #* @apiTitle Diabetes Prediction API
 #* @apiDescription API endpoints for diabetes prediction and model information.
@@ -36,7 +56,7 @@ function(HighBP = 0, HighChol = 0, PhysActivity = 1, Sex = 0, GenHlth = 3, HvyAl
     PhysHlth = as.integer(PhysHlth)
   )
   
-  prediction <- predict(best_model, newdata = input_data, type = "prob")[, 2]
+  prediction <- predict(best_model, new_data = input_data, type = "prob")$.pred_1
   
   return(list(diabetes_risk = prediction))
 }
@@ -61,10 +81,12 @@ function() {
 #* @serializer png
 #* @get /confusion
 function() {
-  predictions <- predict(best_model, newdata = diabetes_data, type = "response")
-  confusion_matrix <- table(predictions, diabetes_data$Diabetes_binary)
+  predictions <- predict(best_model, new_data = diabetes_data) %>% 
+    bind_cols(diabetes_data %>% select(Diabetes_binary))
   
-  plot <- ggplot(data = as.data.frame(confusion_matrix), aes(x = predictions, y = Var2, fill = Freq)) +
+  confusion_matrix <- table(predictions$.pred_class, predictions$Diabetes_binary)
+  
+  plot <- ggplot(data = as.data.frame(confusion_matrix), aes(x = Var1, y = Var2, fill = Freq)) +
     geom_tile() +
     geom_text(aes(label = Freq), color = "white", size = 8) +
     scale_fill_gradient(low = "white", high = "steelblue") +
