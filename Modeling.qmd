@@ -30,7 +30,7 @@ library(recipes)
 library(tidymodels)
 library(rpart.plot)
 library(vip)
-library(ggplot2)
+
 
 diabetes_data <- read.csv ("diabetes_binary_health_indicators_BRFSS2015.csv")
 
