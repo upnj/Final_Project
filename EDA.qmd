@@ -319,4 +319,6 @@ Among the three lifestyle factors examined (physical activity, fruit consumption
 Fruit and vegetable consumption show weaker associations with diabetes prevalence. The proportions of individuals consuming these foods are only slightly lower in the diabetes group compared to the non-diabetes group, with vegetable consumption showing a somewhat stronger association than fruit consumption.
 These findings suggest that promoting physical activity should be a key focus of diabetes prevention and management efforts. While encouraging fruit and vegetable consumption is also important for overall health, these factors appear to have a less direct relationship with diabetes prevalence in this data.
 
+Next we will do modeling on this data.
+
 [click here for the Modeling page](Modeling.html)
