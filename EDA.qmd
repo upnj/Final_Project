@@ -303,7 +303,6 @@ This finding suggests a weak to moderate association between not consuming veget
 
 ### Overall Summary:
 
-
 The analyses reveal several key factors associated with diabetes prevalence in this dataset. Age, education, income, BMI, and physical activity all show significant relationships with diabetes risk.
 Diabetes prevalence increases markedly with age and is highest among those with the lowest education and income levels. Higher BMI and physical inactivity are also strongly associated with increased diabetes prevalence.
 Males appear to have a slightly higher risk of diabetes compared to females, though the difference is not as pronounced as for the other factors examined.
