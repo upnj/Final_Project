@@ -301,7 +301,7 @@ The proportion of individuals who consume vegetables is lower among those with d
 
 This finding suggests a weak to moderate association between not consuming vegetables and a higher prevalence of diabetes. The difference in the proportion of vegetable consumers between the diabetes and non-diabetes groups (12.99% vs 18.00%) is somewhat larger than for fruit consumption, but still less substantial than the association seen with physical activity.
 
-###Overall Summary:
+### Overall Summary:
 
 
 The analyses reveal several key factors associated with diabetes prevalence in this dataset. Age, education, income, BMI, and physical activity all show significant relationships with diabetes risk.
